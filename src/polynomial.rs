@@ -1,10 +1,10 @@
+use plotters_canvas::CanvasBackend;
 use crate::DrawResult;
 use plotters::prelude::*;
-use plotters_canvas::CanvasBackend;
+use web_sys::HtmlCanvasElement;
 
-/// Draw power function f(x) = x^power.
-pub fn draw(canvas_id: &str, power: i32) -> DrawResult<impl Fn((i32, i32)) -> Option<(f32, f32)>> {
-    let backend = CanvasBackend::new(canvas_id).expect("cannot find canvas");
+pub fn draw(canvas: HtmlCanvasElement) -> DrawResult<impl Fn((i32, i32)) -> Option<(f32, f32)>> {
+    let backend = CanvasBackend::with_canvas_object(canvas).unwrap();
     let root = backend.into_drawing_area();
     let font: FontDesc = ("sans-serif", 20.0).into();
 
@@ -12,7 +12,7 @@ pub fn draw(canvas_id: &str, power: i32) -> DrawResult<impl Fn((i32, i32)) -> Op
 
     let mut chart = ChartBuilder::on(&root)
         .margin(20u32)
-        .caption(format!("y=x^{}", power), font)
+        .caption(format!("y=x^{}", 5), font)
         .x_label_area_size(30u32)
         .y_label_area_size(30u32)
         .build_cartesian_2d(-1f32..1f32, -1.2f32..1.2f32)?;
@@ -22,7 +22,7 @@ pub fn draw(canvas_id: &str, power: i32) -> DrawResult<impl Fn((i32, i32)) -> Op
     chart.draw_series(LineSeries::new(
         (-50..=50)
             .map(|x| x as f32 / 50.0)
-            .map(|x| (x, x.powf(power as f32))),
+            .map(|x| (x, x.powf(4.0))),
         &RED,
     ))?;
 
