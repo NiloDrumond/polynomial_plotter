@@ -3,7 +3,25 @@ use crate::DrawResult;
 use plotters::prelude::*;
 use web_sys::HtmlCanvasElement;
 
-pub fn draw(canvas: HtmlCanvasElement) -> DrawResult<impl Fn((i32, i32)) -> Option<(f32, f32)>> {
+pub struct Polynomial {
+    coefficients: Vec<f32>
+}
+
+impl Polynomial {
+    pub fn from_coefficients(coefficients: Vec<f32>) -> Self {
+        Self { coefficients }
+    }
+    fn get_image(self, x: f32) -> f32 {
+        let len = self.coefficients.len();
+        let mut image = 0f32;
+        for i in 0..len {
+            image += self.coefficients[i] * x.powf(i as f32);
+        }
+        image
+    }
+}
+
+pub fn draw(canvas: HtmlCanvasElement, polynomial: Polynomial) -> DrawResult<impl Fn((i32, i32)) -> Option<(f32, f32)>> {
     let backend = CanvasBackend::with_canvas_object(canvas).unwrap();
     let root = backend.into_drawing_area();
     let font: FontDesc = ("sans-serif", 20.0).into();
@@ -15,14 +33,14 @@ pub fn draw(canvas: HtmlCanvasElement) -> DrawResult<impl Fn((i32, i32)) -> Opti
         .caption(format!("y=x^{}", 5), font)
         .x_label_area_size(30u32)
         .y_label_area_size(30u32)
-        .build_cartesian_2d(-1f32..1f32, -1.2f32..1.2f32)?;
+        .build_cartesian_2d(-10f32..10f32, -10.2f32..10.2f32)?;
 
     chart.configure_mesh().x_labels(3).y_labels(3).draw()?;
 
     chart.draw_series(LineSeries::new(
-        (-50..=50)
+        (-500..=500)
             .map(|x| x as f32 / 50.0)
-            .map(|x| (x, x.powf(4.0))),
+            .map(|x| (x, polynomial.get_image(x))),
         &RED,
     ))?;
 

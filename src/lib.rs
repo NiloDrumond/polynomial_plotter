@@ -25,8 +25,8 @@ pub struct Point {
 
 #[wasm_bindgen]
 impl Chart {
-    pub fn polynomial(canvas: HtmlCanvasElement) -> Result<Chart, JsValue> {
-        let map_coord = polynomial::draw(canvas).map_err(|err| err.to_string())?;
+    pub fn polynomial(canvas: HtmlCanvasElement, coefficients: Vec<f32>) -> Result<Chart, JsValue> {
+        let map_coord = polynomial::draw(canvas, Polynomial::from_coefficients(coefficients)).map_err(|err| err.to_string())?;
         Ok(Chart {
             convert: Box::new(move |coord| map_coord(coord).map(|(x, y)| (x.into(), y.into()))),
         })
