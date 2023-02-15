@@ -1,6 +1,8 @@
 use wasm_bindgen::prelude::*;
 use web_sys::HtmlCanvasElement;
 
+use crate::polynomial::Polynomial;
+
 mod polynomial;
 
 #[global_allocator]

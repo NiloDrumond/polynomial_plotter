@@ -5,6 +5,9 @@ class Chart { }
 const canvas = document.getElementById("canvas");
 const coord = document.getElementById("coord");
 const status = document.getElementById("status");
+const coefficients = document.getElementById("coefficients");
+const addCoefficient = document.getElementById("add-coe");
+const generate = document.getElementById("generate");
 
 let chart = null;
 
@@ -12,6 +15,10 @@ let chart = null;
 export function main() {
   setupUI();
   setupCanvas();
+
+  spawnCoefficient();
+  spawnCoefficient();
+  spawnCoefficient();
 }
 
 /** This function is used in `bootstrap.js` to setup imports. */
@@ -22,12 +29,15 @@ export function setup(WasmChart) {
 /** Add event listeners. */
 function setupUI() {
   status.innerText = "WebAssembly loaded!";
+  addCoefficient.addEventListener("click", spawnCoefficient)
   window.addEventListener("resize", setupCanvas);
   window.addEventListener("mousemove", onMouseMove);
+  generate.addEventListener("click", updatePlot);
 }
 
 /** Setup canvas to properly handle high DPI and redraw current plot. */
 function setupCanvas() {
+
   const dpr = window.devicePixelRatio || 1.0;
   const aspectRatio = canvas.width / canvas.height;
   const size = canvas.parentNode.offsetWidth * 0.8;
@@ -58,11 +68,29 @@ function onMouseMove(event) {
 
 /** Redraw currently selected plot. */
 function updatePlot() {
+  let inputs = document.querySelectorAll('.coe');
+  let values = Array.from(inputs).map((input) => Number(input.value));
+
   status.innerText = 'Rendering...';
   chart = null;
   const start = performance.now();
-  console.log(Chart)
-  chart = Chart.polynomial(canvas);
+  chart = Chart.polynomial(canvas, values);
   const end = performance.now();
   status.innerText = `Rendered in ${Math.ceil(end - start)}ms`;
 }
+
+function spawnCoefficient() {
+  let container = document.createElement("div");
+  let input = document.createElement("input");
+  let button = document.createElement("button");
+  input.classList.add("coe")
+  button.innerText = "x"
+  container.appendChild(input)
+  container.appendChild(button)
+  button.addEventListener("click", () => {
+    container.remove();
+  })
+
+  coefficients.appendChild(container)
+}
+

@@ -1,17 +1,17 @@
-use plotters_canvas::CanvasBackend;
 use crate::DrawResult;
 use plotters::prelude::*;
+use plotters_canvas::CanvasBackend;
 use web_sys::HtmlCanvasElement;
 
 pub struct Polynomial {
-    coefficients: Vec<f32>
+    coefficients: Vec<f32>,
 }
 
 impl Polynomial {
     pub fn from_coefficients(coefficients: Vec<f32>) -> Self {
         Self { coefficients }
     }
-    fn get_image(self, x: f32) -> f32 {
+    fn get_image(&self, x: f32) -> f32 {
         let len = self.coefficients.len();
         let mut image = 0f32;
         for i in 0..len {
@@ -19,9 +19,26 @@ impl Polynomial {
         }
         image
     }
+
+    fn get_caption(&self) -> String {
+        let mut caption = "y =".to_string();
+        let len = self.coefficients.len();
+        for i in 0..len {
+            if i == 0 {
+                caption += &format!(" {} +", self.coefficients[i]);
+            } else {
+                caption += &format!(" {}x^{} +", self.coefficients[i], i);
+            }
+        }
+        caption.pop();
+        caption
+    }
 }
 
-pub fn draw(canvas: HtmlCanvasElement, polynomial: Polynomial) -> DrawResult<impl Fn((i32, i32)) -> Option<(f32, f32)>> {
+pub fn draw(
+    canvas: HtmlCanvasElement,
+    polynomial: Polynomial,
+) -> DrawResult<impl Fn((i32, i32)) -> Option<(f32, f32)>> {
     let backend = CanvasBackend::with_canvas_object(canvas).unwrap();
     let root = backend.into_drawing_area();
     let font: FontDesc = ("sans-serif", 20.0).into();
@@ -30,7 +47,7 @@ pub fn draw(canvas: HtmlCanvasElement, polynomial: Polynomial) -> DrawResult<imp
 
     let mut chart = ChartBuilder::on(&root)
         .margin(20u32)
-        .caption(format!("y=x^{}", 5), font)
+        .caption(polynomial.get_caption(), font)
         .x_label_area_size(30u32)
         .y_label_area_size(30u32)
         .build_cartesian_2d(-10f32..10f32, -10.2f32..10.2f32)?;
