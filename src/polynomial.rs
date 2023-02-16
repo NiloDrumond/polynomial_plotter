@@ -38,6 +38,7 @@ impl Polynomial {
 pub fn draw(
     canvas: HtmlCanvasElement,
     polynomial: Polynomial,
+    prev_polynomial: Option<Polynomial>,
 ) -> DrawResult<impl Fn((i32, i32)) -> Option<(f32, f32)>> {
     let backend = CanvasBackend::with_canvas_object(canvas).unwrap();
     let root = backend.into_drawing_area();
@@ -60,6 +61,15 @@ pub fn draw(
             .map(|x| (x, polynomial.get_image(x))),
         &RED,
     ))?;
+
+    if let Some(prev_polynomial) = prev_polynomial {
+        chart.draw_series(LineSeries::new(
+            (-500..=500)
+                .map(|x| x as f32 / 50.0)
+                .map(|x| (x, prev_polynomial.get_image(x))),
+            &GREEN,
+        ))?;
+    }
 
     root.present()?;
     return Ok(chart.into_coord_trans());

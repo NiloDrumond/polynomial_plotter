@@ -3,6 +3,7 @@ use web_sys::HtmlCanvasElement;
 
 use crate::polynomial::Polynomial;
 
+mod utils;
 mod polynomial;
 
 #[global_allocator]
@@ -27,8 +28,19 @@ pub struct Point {
 
 #[wasm_bindgen]
 impl Chart {
-    pub fn polynomial(canvas: HtmlCanvasElement, coefficients: Vec<f32>) -> Result<Chart, JsValue> {
-        let map_coord = polynomial::draw(canvas, Polynomial::from_coefficients(coefficients)).map_err(|err| err.to_string())?;
+    pub fn polynomial(
+        canvas: HtmlCanvasElement,
+        coefficients: Vec<f32>,
+        prev_coefficients: Option<Vec<f32>>,
+    ) -> Result<Chart, JsValue> {
+        utils::set_panic_hook();
+        let polynomial = Polynomial::from_coefficients(coefficients);
+        let mut prev_polynomial = None;
+        if let Some(prev_coefficients) = prev_coefficients {
+            prev_polynomial = Some(Polynomial::from_coefficients(prev_coefficients));
+        }
+        let map_coord =
+            polynomial::draw(canvas, polynomial, prev_polynomial).map_err(|err| err.to_string())?;
         Ok(Chart {
             convert: Box::new(move |coord| map_coord(coord).map(|(x, y)| (x.into(), y.into()))),
         })

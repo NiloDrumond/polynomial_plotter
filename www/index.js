@@ -10,6 +10,7 @@ const addCoefficient = document.getElementById("add-coe");
 const generate = document.getElementById("generate");
 
 let chart = null;
+let prevCoe = undefined;
 
 /** Main entry point */
 export function main() {
@@ -70,12 +71,14 @@ function onMouseMove(event) {
 function updatePlot() {
   let inputs = document.querySelectorAll('.coe');
   let values = Array.from(inputs).map((input) => Number(input.value));
+  if (values.length === 0) return;
 
   status.innerText = 'Rendering...';
   chart = null;
   const start = performance.now();
-  chart = Chart.polynomial(canvas, values);
+  chart = Chart.polynomial(canvas, values, prevCoe);
   const end = performance.now();
+  prevCoe = values;
   status.innerText = `Rendered in ${Math.ceil(end - start)}ms`;
 }
 
