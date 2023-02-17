@@ -43,7 +43,7 @@ impl Chart {
         let map_coord = polynomial
             .draw(canvas, prev_polynomial)
             .map_err(|err| err.to_string())?;
-        let roots = polynomial.get_roots();
+        let roots = polynomial.format_roots();
         roots_el.set_inner_html(&roots);
         Ok(Chart {
             convert: Box::new(move |coord| map_coord(coord).map(|(x, y)| (x.into(), y.into()))),

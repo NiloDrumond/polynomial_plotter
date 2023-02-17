@@ -123,11 +123,11 @@ impl Polynomial {
         return Self::from_coefficients(derivative_coefficients);
     }
 
-    fn get_some_root(&self, a: f64, b: f64) -> Option<f64> {
+    fn bsearch_root(&self, a: f64, b: f64) -> Option<f64> {
         let mut lo = a;
         let mut hi = b;
         let mut loimg = self.get_image(lo);
-        let mut hiimg = self.get_image(hi);
+        let hiimg = self.get_image(hi);
 
         if cmp(loimg, 0.0) == 0.0 {
             return Some(lo);
@@ -146,14 +146,13 @@ impl Polynomial {
                 loimg = midimg;
                 lo = mid;
             } else {
-                hiimg = midimg;
                 hi = mid;
             }
         }
         return Some(lo);
     }
 
-    fn find_roots(&self) -> Vec<f64> {
+    fn get_roots(&self) -> Vec<f64> {
         let len = self.coefficients.len();
         if len == 1 {
             if self.coefficients[0] == 0.0 {
@@ -164,7 +163,7 @@ impl Polynomial {
 
         // {-INF, ... roots ..., +INF}
         let mut derivative_roots = vec![-INF];
-        derivative_roots.extend(self.find_derivative().find_roots());
+        derivative_roots.extend(self.find_derivative().get_roots());
         derivative_roots.push(INF);
 
         let mut current_roots: Vec<f64> = vec![];
@@ -173,7 +172,7 @@ impl Polynomial {
         for i in 1..derivatives_len {
             let prev = derivative_roots[i - 1];
             let cur = derivative_roots[i];
-            let some_root = self.get_some_root(prev, cur);
+            let some_root = self.bsearch_root(prev, cur);
             if let Some(some_root) = some_root {
                 let mut can_insert = true;
                 let lst = current_roots.last();
@@ -188,8 +187,8 @@ impl Polynomial {
         return current_roots;
     }
 
-    pub fn get_roots(&self) -> String {
-        let value = self.find_roots();
+    pub fn format_roots(&self) -> String {
+        let value = self.get_roots();
         let mut text = "".to_string();
         for root in value {
             text += &format!("{} <br />", root);
