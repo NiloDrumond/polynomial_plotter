@@ -3,24 +3,119 @@ use plotters::prelude::*;
 use plotters_canvas::CanvasBackend;
 use web_sys::HtmlCanvasElement;
 
-#[derive(PartialEq, PartialOrd)]
-struct Coordinate(f32, f32);
-
 pub struct Polynomial {
-    coefficients: Vec<f32>,
+    coefficients: Vec<f64>
 }
-
+pub fn cmp(a: f64, b: f64) -> f64 {
+    let EPS = 1e-6;
+    if (a - b).abs() < EPS {
+        return 0f64;
+    } else if a > b {
+        return 1f64;
+    } else {
+        return -1f64;
+    }
+}
+pub fn same_sign(a: f64, b: f64) -> bool {
+    let mut same = false;
+    same |= a.is_sign_positive() && b.is_sign_positive();
+    same |= a.is_sign_negative() && b.is_sign_negative();
+    return same;
+}
 impl Polynomial {
-    pub fn from_coefficients(coefficients: Vec<f32>) -> Self {
+    pub fn from_coefficients(coefficients: Vec<f64>) -> Self {
         Self { coefficients }
     }
-    fn get_image(&self, x: f32) -> f32 {
+    fn get_image(&self, x: f64) -> f64 {
         let len = self.coefficients.len();
-        let mut image = 0f32;
+        let mut image = 0f64;
+        let mut x_pot = 1f64;
         for i in 0..len {
-            image += self.coefficients[i] * x.powf(i as f32);
+            image += self.coefficients[i] * x_pot;
+            x_pot *= x;
         }
         image
+    }
+    fn find_derivative(&self) -> Polynomial {
+        let len = self.coefficients.len();
+        if len <= 1 {
+           return Self::from_coefficients(vec![]);
+        }
+        let mut derivative_coefficients = vec![0.0; len - 1];
+        for i in 1..len {
+            derivative_coefficients[i - 1] = (i as f64) * self.coefficients[i];
+        }
+        let lst = *derivative_coefficients.last().unwrap();
+        for i in 1..len {
+            derivative_coefficients[i - 1] /= lst;
+        }
+        return Self::from_coefficients(derivative_coefficients);
+    }
+    
+    fn get_some_root(&self, a: f64, b: f64) -> Option<f64> {
+        let mut lo = a;
+        let mut hi = b;
+        let mut loimg = self.get_image(lo);
+        let mut hiimg = self.get_image(hi);
+
+        if cmp(loimg, 0.0) == 0.0 {
+            return Some(lo);
+        }
+        if cmp(hiimg, 0.0) == 0.0 {
+            return Some(hi);
+        }
+        if same_sign(loimg, hiimg) {
+            return None;
+        }
+
+        for _ in 0..500 {
+            let mid = (lo + hi) / 2.0;
+            let midimg = self.get_image(mid);
+            if same_sign(loimg, midimg) {
+                loimg = midimg;
+                lo = mid;
+            } else {
+                hiimg = midimg;
+                hi = mid;
+            }
+        }
+        return Some(lo);
+    }
+    
+    fn find_roots(&self) -> Vec<f64> {
+        let len = self.coefficients.len();
+        if len == 1 {
+            if self.coefficients[0] == 0.0 {
+                return vec![0.0];
+            }
+            return vec![];
+        }
+        
+        // {-INF, ... roots ..., +INF}
+        let INF = i32::MAX as f64 / 2.0;
+        let mut derivative_roots = vec![-INF];
+        derivative_roots.extend(self.find_derivative().find_roots());
+        derivative_roots.push(INF);
+
+        let mut current_roots: Vec<f64> = vec![];
+        let derivatives_len = derivative_roots.len();
+        
+        for i in 1..derivatives_len {
+            let prev = derivative_roots[i - 1];
+            let cur = derivative_roots[i];
+            let some_root = self.get_some_root(prev, cur);
+            if let Some(some_root) = some_root {
+                let mut can_insert = true;
+                let lst = current_roots.last();
+                if let Some(lst) = lst {
+                    can_insert &= cmp(some_root, *lst) != 0f64;
+                }
+                if can_insert {
+                    current_roots.push(some_root);
+                }
+            }
+        }
+        return current_roots;
     }
 
     fn get_caption(&self) -> String {
@@ -38,26 +133,21 @@ impl Polynomial {
     }
 }
 
-// impl Ord for Coordinate {
-//     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-//
-//     }
-// }
 
 pub fn draw(
     canvas: HtmlCanvasElement,
     polynomial: Polynomial,
     prev_polynomial: Option<Polynomial>,
-) -> DrawResult<impl Fn((i32, i32)) -> Option<(f32, f32)>> {
+) -> DrawResult<impl Fn((i32, i32)) -> Option<(f64, f64)>> {
     let backend = CanvasBackend::with_canvas_object(canvas).unwrap();
     let root = backend.into_drawing_area();
     let font: FontDesc = ("sans-serif", 20.0).into();
 
     root.fill(&WHITE)?;
 
-    let mut max = f32::MIN;
-    let mut min = f32::MAX;
-    let data = (-500..=500).map(|x| x as f32 / 50.0).map(|x| {
+    let mut max = f32::MIN as f64;
+    let mut min = f32::MAX as f64;
+    let data = (-500..=500).map(|x| x as f64 / 50.0).map(|x| {
         let y = polynomial.get_image(x);
         if y > max {
             max = y
@@ -71,7 +161,7 @@ pub fn draw(
 
     let mut prev_series = None;
     if let Some(prev_polynomial) = prev_polynomial {
-        let prev_data = (-500..=500).map(|x| x as f32 / 50.0).map(|x| {
+        let prev_data = (-500..=500).map(|x| x as f64 / 50.0).map(|x| {
             let y = prev_polynomial.get_image(x);
             if y > max {
                 max = y
@@ -85,7 +175,7 @@ pub fn draw(
     }
 
 
-    let max_abs = f32::max(min.abs(), max.abs());
+    let max_abs = f64::max(min.abs(), max.abs());
     let min = -max_abs;
     let max = max_abs;
 
@@ -94,7 +184,7 @@ pub fn draw(
         .caption(polynomial.get_caption(), font)
         .x_label_area_size(30u32)
         .y_label_area_size(30u32)
-        .build_cartesian_2d(-10f32..10f32, min..max)?;
+        .build_cartesian_2d(-10f64..10f64, min..max)?;
 
     chart.configure_mesh().x_labels(3).y_labels(9).draw()?;
 

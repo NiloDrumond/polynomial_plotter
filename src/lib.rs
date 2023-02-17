@@ -30,8 +30,8 @@ pub struct Point {
 impl Chart {
     pub fn polynomial(
         canvas: HtmlCanvasElement,
-        coefficients: Vec<f32>,
-        prev_coefficients: Option<Vec<f32>>,
+        coefficients: Vec<f64>,
+        prev_coefficients: Option<Vec<f64>>,
     ) -> Result<Chart, JsValue> {
         utils::set_panic_hook();
         let polynomial = Polynomial::from_coefficients(coefficients);
