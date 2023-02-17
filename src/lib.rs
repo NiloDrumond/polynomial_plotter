@@ -1,10 +1,10 @@
 use wasm_bindgen::prelude::*;
-use web_sys::HtmlCanvasElement;
+use web_sys::{HtmlCanvasElement, HtmlElement};
 
 use crate::polynomial::Polynomial;
 
-mod utils;
 mod polynomial;
+mod utils;
 
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
@@ -30,6 +30,7 @@ pub struct Point {
 impl Chart {
     pub fn polynomial(
         canvas: HtmlCanvasElement,
+        roots_el: HtmlElement,
         coefficients: Vec<f64>,
         prev_coefficients: Option<Vec<f64>>,
     ) -> Result<Chart, JsValue> {
@@ -39,8 +40,11 @@ impl Chart {
         if let Some(prev_coefficients) = prev_coefficients {
             prev_polynomial = Some(Polynomial::from_coefficients(prev_coefficients));
         }
-        let map_coord =
-            polynomial::draw(canvas, polynomial, prev_polynomial).map_err(|err| err.to_string())?;
+        let map_coord = polynomial
+            .draw(canvas, prev_polynomial)
+            .map_err(|err| err.to_string())?;
+        let roots = polynomial.get_roots();
+        roots_el.set_inner_html(&roots);
         Ok(Chart {
             convert: Box::new(move |coord| map_coord(coord).map(|(x, y)| (x.into(), y.into()))),
         })

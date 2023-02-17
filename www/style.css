@@ -26,7 +26,7 @@ main {
 
 #coord, #status {
     color: grey;
-    font-size: 10px;
+    font-size: 12px;
     height: 15px
 }
 
@@ -71,4 +71,15 @@ footer {
 #coefficients > div > input {
   margin-right: 4px;
 } 
+
+#roots-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center
+}
+
+#roots {
+  margin-top: 4px;
+}
 

@@ -1,27 +1,17 @@
-use crate::DrawResult;
+use crate::{
+    utils::{cmp, same_sign},
+    DrawResult,
+};
 use plotters::prelude::*;
 use plotters_canvas::CanvasBackend;
 use web_sys::HtmlCanvasElement;
 
+const INF: f64 = i32::MAX as f64 / 2.0;
+
 pub struct Polynomial {
-    coefficients: Vec<f64>
+    coefficients: Vec<f64>,
 }
-pub fn cmp(a: f64, b: f64) -> f64 {
-    let EPS = 1e-6;
-    if (a - b).abs() < EPS {
-        return 0f64;
-    } else if a > b {
-        return 1f64;
-    } else {
-        return -1f64;
-    }
-}
-pub fn same_sign(a: f64, b: f64) -> bool {
-    let mut same = false;
-    same |= a.is_sign_positive() && b.is_sign_positive();
-    same |= a.is_sign_negative() && b.is_sign_negative();
-    return same;
-}
+
 impl Polynomial {
     pub fn from_coefficients(coefficients: Vec<f64>) -> Self {
         Self { coefficients }
@@ -36,10 +26,91 @@ impl Polynomial {
         }
         image
     }
+
+    fn get_caption(&self) -> String {
+        let mut caption = "y =".to_string();
+        let len = self.coefficients.len();
+        for i in 0..len {
+            if i == 0 {
+                caption += &format!(" {} +", self.coefficients[i]);
+            } else {
+                caption += &format!(" {}x^{} +", self.coefficients[i], i);
+            }
+        }
+        caption.pop();
+        caption
+    }
+
+    pub fn draw(
+        &self,
+        canvas: HtmlCanvasElement,
+        prev_polynomial: Option<Polynomial>,
+    ) -> DrawResult<impl Fn((i32, i32)) -> Option<(f64, f64)>> {
+        let backend = CanvasBackend::with_canvas_object(canvas).unwrap();
+        let root = backend.into_drawing_area();
+        let font: FontDesc = ("sans-serif", 20.0).into();
+
+        root.fill(&WHITE)?;
+
+        let mut max = f32::MIN as f64;
+        let mut min = f32::MAX as f64;
+        let data = (-500..=500).map(|x| x as f64 / 50.0).map(|x| {
+            let y = self.get_image(x);
+            if y > max {
+                max = y
+            }
+            if y < min {
+                min = y
+            }
+            (x, y)
+        });
+        let series = LineSeries::new(data, &RED);
+
+        let mut prev_series = None;
+        if let Some(prev_polynomial) = prev_polynomial {
+            let prev_data = (-500..=500).map(|x| x as f64 / 50.0).map(|x| {
+                let y = prev_polynomial.get_image(x);
+                if y > max {
+                    max = y
+                }
+                if y < min {
+                    min = y
+                }
+                (x, y)
+            });
+            prev_series = Some(LineSeries::new(prev_data, &GREEN));
+        }
+
+        let max_abs = f64::max(min.abs(), max.abs());
+        let min = -max_abs;
+        let max = max_abs;
+
+        let mut chart = ChartBuilder::on(&root)
+            .margin(20u32)
+            .caption(self.get_caption(), font)
+            .x_label_area_size(30u32)
+            .y_label_area_size(30u32)
+            .build_cartesian_2d(-10f64..10f64, min..max)?;
+
+        chart.configure_mesh().x_labels(3).y_labels(9).draw()?;
+
+        chart.draw_series(series)?;
+
+        if let Some(prev_series) = prev_series {
+            chart.draw_series(prev_series)?;
+        }
+
+        root.present()?;
+        return Ok(chart.into_coord_trans());
+    }
+}
+
+// Roots
+impl Polynomial {
     fn find_derivative(&self) -> Polynomial {
         let len = self.coefficients.len();
         if len <= 1 {
-           return Self::from_coefficients(vec![]);
+            return Self::from_coefficients(vec![]);
         }
         let mut derivative_coefficients = vec![0.0; len - 1];
         for i in 1..len {
@@ -51,7 +122,7 @@ impl Polynomial {
         }
         return Self::from_coefficients(derivative_coefficients);
     }
-    
+
     fn get_some_root(&self, a: f64, b: f64) -> Option<f64> {
         let mut lo = a;
         let mut hi = b;
@@ -81,7 +152,7 @@ impl Polynomial {
         }
         return Some(lo);
     }
-    
+
     fn find_roots(&self) -> Vec<f64> {
         let len = self.coefficients.len();
         if len == 1 {
@@ -90,16 +161,15 @@ impl Polynomial {
             }
             return vec![];
         }
-        
+
         // {-INF, ... roots ..., +INF}
-        let INF = i32::MAX as f64 / 2.0;
         let mut derivative_roots = vec![-INF];
         derivative_roots.extend(self.find_derivative().find_roots());
         derivative_roots.push(INF);
 
         let mut current_roots: Vec<f64> = vec![];
         let derivatives_len = derivative_roots.len();
-        
+
         for i in 1..derivatives_len {
             let prev = derivative_roots[i - 1];
             let cur = derivative_roots[i];
@@ -118,82 +188,12 @@ impl Polynomial {
         return current_roots;
     }
 
-    fn get_caption(&self) -> String {
-        let mut caption = "y =".to_string();
-        let len = self.coefficients.len();
-        for i in 0..len {
-            if i == 0 {
-                caption += &format!(" {} +", self.coefficients[i]);
-            } else {
-                caption += &format!(" {}x^{} +", self.coefficients[i], i);
-            }
+    pub fn get_roots(&self) -> String {
+        let value = self.find_roots();
+        let mut text = "".to_string();
+        for root in value {
+            text += &format!("{} <br />", root);
         }
-        caption.pop();
-        caption
+        text
     }
-}
-
-
-pub fn draw(
-    canvas: HtmlCanvasElement,
-    polynomial: Polynomial,
-    prev_polynomial: Option<Polynomial>,
-) -> DrawResult<impl Fn((i32, i32)) -> Option<(f64, f64)>> {
-    let backend = CanvasBackend::with_canvas_object(canvas).unwrap();
-    let root = backend.into_drawing_area();
-    let font: FontDesc = ("sans-serif", 20.0).into();
-
-    root.fill(&WHITE)?;
-
-    let mut max = f32::MIN as f64;
-    let mut min = f32::MAX as f64;
-    let data = (-500..=500).map(|x| x as f64 / 50.0).map(|x| {
-        let y = polynomial.get_image(x);
-        if y > max {
-            max = y
-        }
-        if y < min {
-            min = y
-        }
-        (x, y)
-    });
-    let series = LineSeries::new(data, &RED);
-
-    let mut prev_series = None;
-    if let Some(prev_polynomial) = prev_polynomial {
-        let prev_data = (-500..=500).map(|x| x as f64 / 50.0).map(|x| {
-            let y = prev_polynomial.get_image(x);
-            if y > max {
-                max = y
-            }
-            if y < min {
-                min = y
-            }
-            (x, y)
-        });
-        prev_series = Some(LineSeries::new(prev_data, &GREEN));
-    }
-
-
-    let max_abs = f64::max(min.abs(), max.abs());
-    let min = -max_abs;
-    let max = max_abs;
-
-    let mut chart = ChartBuilder::on(&root)
-        .margin(20u32)
-        .caption(polynomial.get_caption(), font)
-        .x_label_area_size(30u32)
-        .y_label_area_size(30u32)
-        .build_cartesian_2d(-10f64..10f64, min..max)?;
-
-    chart.configure_mesh().x_labels(3).y_labels(9).draw()?;
-
-    chart.draw_series(series)?;
-
-    if let Some(prev_series) = prev_series {
-        chart.draw_series(prev_series)?;
-    }
-
-    root.present()?;
-    return Ok(chart.into_coord_trans());
 }

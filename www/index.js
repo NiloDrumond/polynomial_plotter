@@ -8,6 +8,7 @@ const status = document.getElementById("status");
 const coefficients = document.getElementById("coefficients");
 const addCoefficient = document.getElementById("add-coe");
 const generate = document.getElementById("generate");
+const roots = document.getElementById("roots");
 
 let chart = null;
 let prevCoe = undefined;
@@ -39,7 +40,6 @@ function setupUI() {
 /** Setup canvas to properly handle high DPI and redraw current plot. */
 function setupCanvas() {
 
-  const dpr = window.devicePixelRatio || 1.0;
   const aspectRatio = canvas.width / canvas.height;
   const size = canvas.parentNode.offsetWidth * 0.8;
   canvas.style.width = size + "px";
@@ -76,7 +76,7 @@ function updatePlot() {
   status.innerText = 'Rendering...';
   chart = null;
   const start = performance.now();
-  chart = Chart.polynomial(canvas, values, prevCoe);
+  chart = Chart.polynomial(canvas, roots, values, prevCoe);
   const end = performance.now();
   prevCoe = values;
   status.innerText = `Rendered in ${Math.ceil(end - start)}ms`;

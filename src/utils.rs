@@ -17,3 +17,22 @@ macro_rules! log {
         web_sys::console::log_1(&format!( $( $t )* ).into());
     }
 }
+
+const EPS: f64 = 1e-6;
+
+pub fn cmp(a: f64, b: f64) -> f64 {
+    if (a - b).abs() < EPS {
+        return 0f64;
+    } else if a > b {
+        return 1f64;
+    } else {
+        return -1f64;
+    }
+}
+
+pub fn same_sign(a: f64, b: f64) -> bool {
+    let mut same = false;
+    same |= a.is_sign_positive() && b.is_sign_positive();
+    same |= a.is_sign_negative() && b.is_sign_negative();
+    return same;
+}
